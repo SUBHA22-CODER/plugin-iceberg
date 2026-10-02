@@ -49,7 +49,46 @@ dependencies {
     annotationProcessor group: "io.kestra", name: "processor", version: kestraVersion
     compileOnly group: "io.kestra", name: "core", version: kestraVersion
     compileOnly group: "io.kestra", name: "script", version: kestraVersion
+
+    // Apache Iceberg platform & modules
+    implementation platform("org.apache.iceberg:iceberg-bom:1.11.0")
+    implementation "org.apache.iceberg:iceberg-api"
+    implementation "org.apache.iceberg:iceberg-core"
+    implementation "org.apache.iceberg:iceberg-data"
+    implementation "org.apache.iceberg:iceberg-parquet"
+    implementation "org.apache.parquet:parquet-hadoop:1.14.1"
+    implementation "org.apache.iceberg:iceberg-aws"
+    implementation "org.apache.iceberg:iceberg-aws-bundle"
+    implementation "org.apache.iceberg:iceberg-nessie"
+    implementation("org.apache.iceberg:iceberg-hive-metastore") {
+        exclude group: "org.slf4j", module: "slf4j-log4j12"
+        exclude group: "log4j", module: "log4j"
+        exclude group: "ch.qos.reload4j", module: "reload4j"
+        exclude group: "org.apache.spark"
+    }
+
+    // Minimal Hadoop support with aggressive exclusions for Parquet/Hive compatibility
+    implementation("org.apache.hadoop:hadoop-common:3.4.1") {
+        exclude group: "org.apache.hadoop", module: "hadoop-hdfs"
+        exclude group: "org.apache.hadoop", module: "hadoop-hdfs-client"
+        exclude group: "org.apache.hadoop", module: "hadoop-yarn-api"
+        exclude group: "org.apache.hadoop", module: "hadoop-yarn-common"
+        exclude group: "org.apache.hadoop", module: "hadoop-yarn-client"
+        exclude group: "org.apache.hadoop", module: "hadoop-mapreduce-client-core"
+        exclude group: "org.apache.hadoop", module: "hadoop-auth"
+        exclude group: "org.slf4j", module: "slf4j-reload4j"
+        exclude group: "org.slf4j", module: "slf4j-log4j12"
+        exclude group: "log4j", module: "log4j"
+        exclude group: "ch.qos.reload4j", module: "reload4j"
+        exclude group: "org.eclipse.jetty"
+        exclude group: "com.sun.jersey"
+        exclude group: "org.apache.kerby"
+        exclude group: "org.apache.curator"
+        exclude group: "org.apache.zookeeper"
+        exclude group: "org.apache.avro", module: "avro"
+    }
 }
+
 
 
 /**********************************************************************************************************************\
@@ -87,6 +126,8 @@ dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter-engine"
     testImplementation "org.hamcrest:hamcrest"
     testImplementation "org.hamcrest:hamcrest-library"
+    testImplementation "org.testcontainers:testcontainers:1.20.6"
+    testImplementation "org.testcontainers:junit-jupiter:1.20.6"
 }
 
 /**********************************************************************************************************************\
@@ -162,6 +203,7 @@ jar {
 shadowJar {
     archiveClassifier.set(null)
     mergeServiceFiles()
+    zip64 = true
 }
 
 /**********************************************************************************************************************\
@@ -188,3 +230,30 @@ idea {
         downloadSources = true
     }
 }
+
+/**********************************************************************************************************************\
+ * Verification Gate: No Spark or Flink Runtime Dependencies
+ **********************************************************************************************************************/
+tasks.register("checkNoSparkOrFlink") {
+    description = "Asserts that no Spark or Flink dependencies are present in runtimeClasspath"
+    group = "verification"
+    doLast {
+        def forbidden = ["spark", "flink"]
+        def found = []
+        configurations.runtimeClasspath.resolvedConfiguration.resolvedArtifacts.each { artifact ->
+            def id = artifact.moduleVersion.id
+            forbidden.each { word ->
+                if (id.group.toLowerCase().contains(word) || id.name.toLowerCase().contains(word)) {
+                    found.add("${id.group}:${id.name}:${id.version}")
+                }
+            }
+        }
+        if (!found.isEmpty()) {
+            throw new GradleException("Forbidden compute engine runtime dependencies found in runtimeClasspath: " + found)
+        }
+        logger.lifecycle("✓ runtimeClasspath verified: 0 Spark or Flink dependencies found.")
+    }
+}
+
+check.dependsOn("checkNoSparkOrFlink")
+

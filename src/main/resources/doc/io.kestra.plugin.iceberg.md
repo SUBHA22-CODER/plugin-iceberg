@@ -1,16 +1,15 @@
-This is the Kestra plugin template. Use it as a starting point for building a new plugin.
+The Apache Iceberg plugin enables Kestra to manage Apache Iceberg catalogs, ingest data directly from internal Kestra storage into Iceberg tables, and automate data lake maintenance operations.
 
-## What this template ships
+## Subpackages
 
-- `Example` is a sample `RunnableTask` that reverses an input string.
-- `Trigger` is a sample polling trigger that fires an execution at random.
+- `io.kestra.plugin.iceberg.catalog`: Control-plane tasks for managing Iceberg namespaces and tables.
+- `io.kestra.plugin.iceberg.data`: Data-plane tasks for streaming and appending data into Iceberg tables.
+- `io.kestra.plugin.iceberg.maintenance`: Maintenance tasks for snapshot expiration, orphan file cleanup, and data file optimization.
 
-## How to build your plugin
+## Catalogs
 
-1. Rename the package `io.kestra.plugin.iceberg` to your own, for example `io.kestra.plugin.myservice`.
-2. Update `group`, `name`, `title`, and `description` in `src/main/resources/metadata/index.yaml`.
-3. Replace `src/main/resources/icons/plugin-icon.svg` with your service's icon.
-4. Replace the `Example` and `Trigger` classes with your real tasks and triggers.
-5. Replace this how-to with documentation for your plugin.
-
-Run `./gradlew lintPluginDocs` before pushing to validate the plugin documentation.
+The plugin supports connecting to multiple Iceberg catalog implementations via `catalogConfig`:
+- REST Catalog (`type: rest`)
+- AWS Glue Catalog (`type: glue`)
+- Hive Metastore (`type: hive`)
+- Nessie Catalog (`type: nessie`)
