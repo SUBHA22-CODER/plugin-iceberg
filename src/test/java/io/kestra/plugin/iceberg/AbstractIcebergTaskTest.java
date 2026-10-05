@@ -1,25 +1,40 @@
 package io.kestra.plugin.iceberg;
 
+import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
-import io.kestra.core.runners.RunContextProperty;
+import io.kestra.core.runners.RunContextFactory;
+import jakarta.inject.Inject;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Field;
-import java.util.*;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class AbstractIcebergTaskTest {
+/**
+ * Unit and lightweight integration tests for {@link AbstractIcebergTask} and
+ * {@link AbstractIcebergTableTask}.
+ *
+ * <p>Pure-logic tests (redact, tableIdentifier, closeCatalog) run without any
+ * framework; the Pebble-rendering test uses a real Kestra {@link RunContext} via
+ * {@link RunContextFactory} so that expression rendering is exercised end-to-end.
+ */
+@KestraTest
+class AbstractIcebergTaskTest {
+
+    // -------------------------------------------------------------------------
+    // Minimal concrete task helpers
+    // -------------------------------------------------------------------------
 
     @SuperBuilder
     @Getter
@@ -39,72 +54,16 @@ public class AbstractIcebergTaskTest {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    static <T> RunContextProperty<T> mockProperty(Object value) {
-        RunContextProperty<T> rcp = Mockito.mock(RunContextProperty.class);
-        try {
-            Mockito.when(rcp.as(Mockito.any())).thenReturn(Optional.ofNullable((T) value));
-            if (value instanceof Map mapVal) {
-                Mockito.when(rcp.asMap(Mockito.any(), Mockito.any())).thenReturn((T) mapVal);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        return rcp;
-    }
+    // -------------------------------------------------------------------------
+    // RunContextFactory injection (used by the Pebble-rendering test only)
+    // -------------------------------------------------------------------------
 
-    static RunContext createMockRunContext(Map<String, Object> variables) {
-        RunContext runContext = Mockito.mock(RunContext.class);
-        Mockito.when(runContext.logger()).thenReturn(LoggerFactory.getLogger(AbstractIcebergTaskTest.class));
+    @Inject
+    private RunContextFactory runContextFactory;
 
-        Mockito.when(runContext.render(Mockito.any(Property.class))).thenAnswer(invocation -> {
-            Property<?> prop = invocation.getArgument(0);
-            Object value = extractPropertyValue(prop);
-
-            if (value instanceof Map<?, ?> map) {
-                Map<String, String> resolved = new LinkedHashMap<>();
-                for (Map.Entry<?, ?> entry : map.entrySet()) {
-                    String k = entry.getKey().toString();
-                    String v = entry.getValue() != null ? entry.getValue().toString() : null;
-                    if (v != null && variables != null) {
-                        for (Map.Entry<String, Object> varEntry : variables.entrySet()) {
-                            if (varEntry.getValue() instanceof Map<?, ?> nested) {
-                                for (Map.Entry<?, ?> nestedEntry : nested.entrySet()) {
-                                    v = v.replace("{{ " + varEntry.getKey() + "." + nestedEntry.getKey() + " }}", nestedEntry.getValue().toString());
-                                }
-                            } else if (varEntry.getValue() != null) {
-                                v = v.replace("{{ " + varEntry.getKey() + " }}", varEntry.getValue().toString());
-                            }
-                        }
-                    }
-                    resolved.put(k, v);
-                }
-                return mockProperty(resolved);
-            } else if (value instanceof String str && variables != null) {
-                for (Map.Entry<String, Object> varEntry : variables.entrySet()) {
-                    if (varEntry.getValue() != null) {
-                        str = str.replace("{{ " + varEntry.getKey() + " }}", varEntry.getValue().toString());
-                    }
-                }
-                return mockProperty(str);
-            }
-
-            return mockProperty(value);
-        });
-
-        return runContext;
-    }
-
-    private static Object extractPropertyValue(Property<?> prop) {
-        if (prop == null) return null;
-        try {
-            Field field = Property.class.getDeclaredField("value");
-            field.setAccessible(true);
-            return field.get(prop);
-        } catch (Exception e) {
-            return null;
-        }
-    }
+    // -------------------------------------------------------------------------
+    // Pure unit tests – no Micronaut context required
+    // -------------------------------------------------------------------------
 
     @Test
     void shouldRedactSensitiveKeys() {
@@ -137,28 +96,13 @@ public class AbstractIcebergTaskTest {
     }
 
     @Test
-    void shouldFailWhenCatalogConfigMissingTypeAndImpl() {
-        DummyIcebergTask task = DummyIcebergTask.builder()
-            .catalogConfig(Property.of(Map.of("warehouse", "s3://my-bucket/warehouse")))
-            .build();
-
-        RunContext runContext = createMockRunContext(null);
-
-        IllegalArgumentException thrown = assertThrows(
-            IllegalArgumentException.class,
-            () -> task.testCatalog(runContext)
-        );
-
-        assertThat(thrown.getMessage(), containsString("must contain either 'type'"));
-    }
-
-    @Test
     void shouldFailWhenCatalogTypeIsUnsupported() {
-        DummyIcebergTask task = DummyIcebergTask.builder()
-            .catalogConfig(Property.of(Map.of("type", "unsupported-catalog")))
-            .build();
+        // Only 'rest' is supported in Phase 1
+        RunContext runContext = runContextFactory.of();
 
-        RunContext runContext = createMockRunContext(null);
+        DummyIcebergTask task = DummyIcebergTask.builder()
+            .catalogConfig(new Property<>(Map.of("type", "unsupported-catalog")))
+            .build();
 
         IllegalArgumentException thrown = assertThrows(
             IllegalArgumentException.class,
@@ -170,39 +114,30 @@ public class AbstractIcebergTaskTest {
     }
 
     @Test
-    void shouldRenderCatalogConfigExpressions() throws Exception {
+    void shouldFailWhenCatalogConfigMissingTypeAndImpl() {
+        RunContext runContext = runContextFactory.of();
+
         DummyIcebergTask task = DummyIcebergTask.builder()
-            .catalogConfig(Property.of(Map.of(
-                "type", "rest",
-                "uri", "{{ vars.rest_uri }}",
-                "token", "{{ vars.secret_token }}"
-            )))
+            .catalogConfig(new Property<>(Map.of("warehouse", "s3://my-bucket/warehouse")))
             .build();
 
-        RunContext runContext = createMockRunContext(Map.of(
-            "vars", Map.of(
-                "rest_uri", "http://localhost:8181",
-                "secret_token", "my-secret-token"
-            )
-        ));
+        IllegalArgumentException thrown = assertThrows(
+            IllegalArgumentException.class,
+            () -> task.testCatalog(runContext)
+        );
 
-        Map<String, String> rendered = runContext.render(task.getCatalogConfig()).asMap(String.class, String.class);
-        assertThat(rendered.get("type"), is("rest"));
-        assertThat(rendered.get("uri"), is("http://localhost:8181"));
-        assertThat(rendered.get("token"), is("my-secret-token"));
-
-        Map<String, String> safe = AbstractIcebergTask.redact(rendered);
-        assertThat(safe.get("token"), is("******"));
+        assertThat(thrown.getMessage(), containsString("must contain either 'type'"));
     }
 
     @Test
     void shouldParseTableIdentifierSingleLevel() throws Exception {
+        RunContext runContext = runContextFactory.of();
+
         DummyIcebergTableTask task = DummyIcebergTableTask.builder()
             .namespace(Property.of("analytics"))
             .tableName(Property.of("events"))
             .build();
 
-        RunContext runContext = createMockRunContext(null);
         TableIdentifier identifier = task.testTableIdentifier(runContext);
 
         assertThat(identifier.namespace().levels(), arrayContaining("analytics"));
@@ -211,12 +146,13 @@ public class AbstractIcebergTaskTest {
 
     @Test
     void shouldParseTableIdentifierMultiLevel() throws Exception {
+        RunContext runContext = runContextFactory.of();
+
         DummyIcebergTableTask task = DummyIcebergTableTask.builder()
             .namespace(Property.of("analytics.raw.v1"))
             .tableName(Property.of("pageviews"))
             .build();
 
-        RunContext runContext = createMockRunContext(null);
         TableIdentifier identifier = task.testTableIdentifier(runContext);
 
         assertThat(identifier.namespace().levels(), arrayContaining("analytics", "raw", "v1"));
@@ -232,6 +168,44 @@ public class AbstractIcebergTaskTest {
         assertTrue(mockCatalog.closed);
     }
 
+    // -------------------------------------------------------------------------
+    // Pebble expression rendering — uses real RunContext
+    // -------------------------------------------------------------------------
+
+    @Test
+    void shouldRenderCatalogConfigExpressionsWithRealRunContext() throws Exception {
+        // Use new Property<>(map) so Pebble expressions are rendered by the real engine
+        RunContext runContext = runContextFactory.of(
+            Map.of("vars", Map.of(
+                "rest_uri", "http://localhost:8181",
+                "secret_token", "my-secret-token"
+            ))
+        );
+
+        DummyIcebergTask task = DummyIcebergTask.builder()
+            .catalogConfig(new Property<>(Map.of(
+                "type", "rest",
+                "uri", "{{ vars.rest_uri }}",
+                "token", "{{ vars.secret_token }}"
+            )))
+            .build();
+
+        Map<String, String> rendered = runContext.render(task.getCatalogConfig())
+            .asMap(String.class, String.class);
+
+        assertThat(rendered.get("type"), is("rest"));
+        assertThat(rendered.get("uri"), is("http://localhost:8181"));
+        assertThat(rendered.get("token"), is("my-secret-token"));
+
+        // Verify that the rendered token is properly redacted for logging
+        Map<String, String> safe = AbstractIcebergTask.redact(rendered);
+        assertThat(safe.get("token"), is("******"));
+    }
+
+    // -------------------------------------------------------------------------
+    // Minimal Catalog stub for the closeCatalog test
+    // -------------------------------------------------------------------------
+
     static class AutoCloseableCatalog implements Catalog, AutoCloseable {
         boolean closed = false;
 
@@ -246,7 +220,7 @@ public class AbstractIcebergTaskTest {
         }
 
         @Override
-        public java.util.List<TableIdentifier> listTables(org.apache.iceberg.catalog.Namespace namespace) {
+        public List<TableIdentifier> listTables(org.apache.iceberg.catalog.Namespace namespace) {
             return Collections.emptyList();
         }
 
@@ -269,7 +243,8 @@ public class AbstractIcebergTaskTest {
         }
 
         @Override
-        public org.apache.iceberg.catalog.Catalog.TableBuilder buildTable(TableIdentifier identifier, org.apache.iceberg.Schema schema) {
+        public org.apache.iceberg.catalog.Catalog.TableBuilder buildTable(
+            TableIdentifier identifier, org.apache.iceberg.Schema schema) {
             return null;
         }
 

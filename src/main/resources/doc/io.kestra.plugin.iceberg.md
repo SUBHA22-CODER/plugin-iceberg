@@ -8,8 +8,14 @@ The Apache Iceberg plugin enables Kestra to manage Apache Iceberg catalogs, inge
 
 ## Catalogs
 
-The plugin supports connecting to multiple Iceberg catalog implementations via `catalogConfig`:
-- REST Catalog (`type: rest`)
-- AWS Glue Catalog (`type: glue`)
-- Hive Metastore (`type: hive`)
-- Nessie Catalog (`type: nessie`)
+This release supports the **REST Catalog** (`type: rest`). Configure the catalog via the `catalogConfig` property:
+
+```yaml
+catalogConfig:
+  type: rest
+  uri: "https://your-iceberg-rest-catalog:8181"
+  credential: "{{ secret('ICEBERG_CREDENTIAL') }}"
+  warehouse: my-warehouse
+```
+
+Support for additional catalog backends (AWS Glue, Hive Metastore, Nessie) is planned for future releases.

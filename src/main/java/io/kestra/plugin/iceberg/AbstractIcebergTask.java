@@ -15,7 +15,11 @@ import org.apache.iceberg.CatalogUtil;
 import org.apache.iceberg.catalog.Catalog;
 import org.slf4j.Logger;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -29,9 +33,12 @@ import java.util.regex.Pattern;
 @NoArgsConstructor
 public abstract class AbstractIcebergTask extends Task {
 
-    public static final Set<String> SUPPORTED_TYPES = Collections.unmodifiableSet(
-        new LinkedHashSet<>(Arrays.asList("rest", "glue", "hive", "nessie", "hadoop"))
-    );
+    /**
+     * Catalog types supported in this release. Only the REST catalog is included
+     * in Phase 1; additional types (Glue, Hive, Nessie, Hadoop) are planned for
+     * future phases once each integration is validated end-to-end.
+     */
+    public static final Set<String> SUPPORTED_TYPES = Set.of("rest");
 
     private static final Pattern SECRET_KEY_PATTERN = Pattern.compile(
         "(?i)(credential|token|secret|password|access[-_.]?key|session)"
@@ -40,7 +47,9 @@ public abstract class AbstractIcebergTask extends Task {
     @Schema(
         title = "Iceberg catalog configuration properties",
         description = "Key-value configuration map passed directly to the Iceberg catalog. " +
-            "Requires 'type' (e.g. 'rest', 'glue', 'hive', 'nessie') or 'catalog-impl' (fully-qualified class name)."
+            "The 'type' key is required and must be set to 'rest'. " +
+            "Use 'uri' to supply the REST catalog endpoint URL. " +
+            "Sensitive values such as 'credential', 'token', and 'secret' are redacted from logs."
     )
     @NotNull
     protected Property<Map<String, String>> catalogConfig;
@@ -115,10 +124,13 @@ public abstract class AbstractIcebergTask extends Task {
             }
         }
 
-        // Initialize Hadoop Configuration for Iceberg catalog/FileIO resolution
+        // CatalogUtil.buildIcebergCatalog() requires a Hadoop Configuration for Parquet/S3
+        // FileIO initialization. We create a minimal Configuration and populate it with the
+        // rendered catalog properties so that keys such as 's3.endpoint' or 'io-impl' are
+        // picked up by the underlying FileIO. Note: all catalog properties — including any
+        // sensitive keys that were already present in the rendered map — are forwarded here.
+        // Callers are responsible for ensuring that only necessary properties are supplied.
         Configuration hadoopConf = new Configuration();
-
-        // Pass any non-secret hadoop/s3 configurations into Hadoop Configuration
         for (Map.Entry<String, String> entry : rendered.entrySet()) {
             if (entry.getKey() != null && entry.getValue() != null) {
                 hadoopConf.set(entry.getKey(), entry.getValue());

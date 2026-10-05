@@ -56,16 +56,8 @@ dependencies {
     implementation "org.apache.iceberg:iceberg-core"
     implementation "org.apache.iceberg:iceberg-data"
     implementation "org.apache.iceberg:iceberg-parquet"
-    implementation "org.apache.parquet:parquet-hadoop:1.14.1"
     implementation "org.apache.iceberg:iceberg-aws"
     implementation "org.apache.iceberg:iceberg-aws-bundle"
-    implementation "org.apache.iceberg:iceberg-nessie"
-    implementation("org.apache.iceberg:iceberg-hive-metastore") {
-        exclude group: "org.slf4j", module: "slf4j-log4j12"
-        exclude group: "log4j", module: "log4j"
-        exclude group: "ch.qos.reload4j", module: "reload4j"
-        exclude group: "org.apache.spark"
-    }
 
     // Minimal Hadoop support with aggressive exclusions for Parquet/Hive compatibility
     implementation("org.apache.hadoop:hadoop-common:3.4.1") {
@@ -96,6 +88,8 @@ dependencies {
  **********************************************************************************************************************/
 test {
     useJUnitPlatform()
+    systemProperties System.properties
+    systemProperty "iceberg.rest.integration", System.getProperty("iceberg.rest.integration", System.getenv("ICEBERG_REST_INTEGRATION") ?: "false")
 }
 
 dependencies {
@@ -126,8 +120,7 @@ dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter-engine"
     testImplementation "org.hamcrest:hamcrest"
     testImplementation "org.hamcrest:hamcrest-library"
-    testImplementation "org.testcontainers:testcontainers:1.20.6"
-    testImplementation "org.testcontainers:junit-jupiter:1.20.6"
+    // Testcontainers versions are managed by the Kestra platform BOM above
 }
 
 /**********************************************************************************************************************\
