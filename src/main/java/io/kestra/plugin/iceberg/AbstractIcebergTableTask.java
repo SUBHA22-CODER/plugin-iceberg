@@ -56,16 +56,11 @@ public abstract class AbstractIcebergTableTask extends AbstractIcebergTask {
             () -> new IllegalArgumentException("'tableName' must not be null or empty.")
         );
 
-        String[] parts = Arrays.stream(renderedNs.split("\\."))
-            .map(String::trim)
-            .filter(part -> !part.isEmpty())
-            .toArray(String[]::new);
-
-        if (parts.length == 0) {
+        Namespace ns = parseNamespace(renderedNs);
+        if (ns.isEmpty()) {
             throw new IllegalArgumentException("Invalid namespace: '" + renderedNs + "'. Must contain at least one non-empty level.");
         }
 
-        Namespace ns = Namespace.of(parts);
         return TableIdentifier.of(ns, renderedTable.trim());
     }
 

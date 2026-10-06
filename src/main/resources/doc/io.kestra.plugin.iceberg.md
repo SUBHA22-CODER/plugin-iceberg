@@ -2,7 +2,7 @@ The Apache Iceberg plugin enables Kestra to manage Apache Iceberg catalogs, inge
 
 ## Subpackages
 
-- `io.kestra.plugin.iceberg.catalog`: Control-plane tasks for managing Iceberg namespaces and tables.
+- `io.kestra.plugin.iceberg.catalog`: Control-plane tasks for managing Iceberg namespaces and tables (`CreateNamespace`, `DropNamespace`, `ListNamespaces`, `CreateTable`, `DropTable`).
 - `io.kestra.plugin.iceberg.data`: Data-plane tasks for streaming and appending data into Iceberg tables.
 - `io.kestra.plugin.iceberg.maintenance`: Maintenance tasks for snapshot expiration, orphan file cleanup, and data file optimization.
 

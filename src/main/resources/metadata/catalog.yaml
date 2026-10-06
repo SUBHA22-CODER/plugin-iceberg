@@ -1,0 +1,5 @@
+group: io.kestra.plugin.iceberg.catalog
+name: catalog
+title: "Apache Iceberg Catalog"
+description: "Control-plane tasks for managing Apache Iceberg namespaces and tables"
+body: ""

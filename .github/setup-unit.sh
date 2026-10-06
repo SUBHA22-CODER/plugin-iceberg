@@ -7,7 +7,9 @@
 # and executable both locally and in GitHub Actions.
 #
 # Services started (via docker-compose-ci.yml):
-#   - rest : Apache Iceberg REST catalog fixture (port 8181)
+#   - minio : S3 storage backend (port 9000)
+#   - mc    : MinIO client initializing the 'warehouse' bucket
+#   - rest  : Apache Iceberg REST catalog fixture (port 8181)
 #
 # Usage:
 #   bash .github/setup-unit.sh
@@ -16,12 +18,21 @@ set -euo pipefail
 compose_file="docker-compose-ci.yml"
 
 # ── Tear down any previous run so we start with a clean state ───────────────
-echo "[setup-unit] Resetting Iceberg REST container..."
+echo "[setup-unit] Resetting Iceberg REST and MinIO containers..."
 docker compose -f "${compose_file}" down -v --remove-orphans >/dev/null 2>&1 || true
 
 # ── Start services ───────────────────────────────────────────────────────────
-echo "[setup-unit] Starting Iceberg REST catalog fixture..."
+echo "[setup-unit] Starting Iceberg REST catalog and MinIO fixture..."
 docker compose -f "${compose_file}" up -d --wait
+
+# ── Ensure the warehouse bucket exists ───────────────────────────────────────
+echo "[setup-unit] Ensuring 'warehouse' bucket exists in MinIO..."
+docker compose -f "${compose_file}" run --rm --entrypoint /bin/sh mc -c "
+  until (/usr/bin/mc alias set myminio http://minio:9000 admin password); do
+    sleep 1;
+  done;
+  /usr/bin/mc mb --ignore-existing myminio/warehouse || true;
+" >/dev/null 2>&1 || true
 
 # ── Verify the Iceberg REST catalog is reachable ─────────────────────────────
 echo "[setup-unit] Verifying Iceberg REST catalog endpoint..."

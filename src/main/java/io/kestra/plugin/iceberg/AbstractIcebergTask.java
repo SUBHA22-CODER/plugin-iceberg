@@ -13,8 +13,11 @@ import lombok.experimental.SuperBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.CatalogUtil;
 import org.apache.iceberg.catalog.Catalog;
+import org.apache.iceberg.catalog.Namespace;
+import org.apache.iceberg.catalog.SupportsNamespaces;
 import org.slf4j.Logger;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -92,6 +95,42 @@ public abstract class AbstractIcebergTask extends Task {
                 }
             }
         }
+    }
+
+    /**
+     * Parses a dot-separated string into an Iceberg Namespace.
+     * Empty or null string returns an empty Namespace (root).
+     *
+     * @param namespaceStr The dot-separated namespace string (e.g. "analytics" or "analytics.raw")
+     * @return The Iceberg Namespace
+     */
+    public static Namespace parseNamespace(String namespaceStr) {
+        if (namespaceStr == null || namespaceStr.trim().isEmpty()) {
+            return Namespace.empty();
+        }
+        String[] parts = Arrays.stream(namespaceStr.split("\\."))
+            .map(String::trim)
+            .filter(part -> !part.isEmpty())
+            .toArray(String[]::new);
+        if (parts.length == 0) {
+            return Namespace.empty();
+        }
+        return Namespace.of(parts);
+    }
+
+    /**
+     * Checks if the catalog implements SupportsNamespaces and casts it, throwing an UnsupportedOperationException if not.
+     *
+     * @param catalog The catalog instance
+     * @return The SupportsNamespaces instance
+     */
+    public static SupportsNamespaces asSupportsNamespaces(Catalog catalog) {
+        if (catalog instanceof SupportsNamespaces supportsNamespaces) {
+            return supportsNamespaces;
+        }
+        throw new UnsupportedOperationException(
+            "Catalog '" + (catalog != null ? catalog.name() : "null") + "' does not support namespace management (does not implement SupportsNamespaces)."
+        );
     }
 
     /**
