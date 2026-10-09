@@ -96,6 +96,22 @@ class AbstractIcebergTaskTest {
     }
 
     @Test
+    void shouldExcludeCatalogConfigFromToString() {
+        DummyIcebergTask task = DummyIcebergTask.builder()
+            .id("test-task")
+            .catalogConfig(Property.of(Map.of(
+                "type", "rest",
+                "uri", "https://iceberg.example.com",
+                "credential", "super-secret-token"
+            )))
+            .build();
+
+        String str = task.toString();
+        assertThat(str, not(containsString("super-secret-token")));
+        assertThat(str, not(containsString("catalogConfig")));
+    }
+
+    @Test
     void shouldFailWhenCatalogTypeIsUnsupported() {
         // Only 'rest' is supported in Phase 1
         RunContext runContext = runContextFactory.of();

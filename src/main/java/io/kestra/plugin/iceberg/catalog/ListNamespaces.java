@@ -2,6 +2,7 @@ package io.kestra.plugin.iceberg.catalog;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
@@ -15,7 +16,6 @@ import org.apache.iceberg.catalog.SupportsNamespaces;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @SuperBuilder
 @ToString
@@ -69,6 +69,7 @@ public class ListNamespaces extends AbstractIcebergTask implements RunnableTask<
         title = "Parent namespace",
         description = "Optional parent namespace to list child namespaces under. If omitted or empty, lists top-level namespaces."
     )
+    @PluginProperty(group = "main")
     private Property<String> namespace;
 
     @Override
@@ -90,7 +91,7 @@ public class ListNamespaces extends AbstractIcebergTask implements RunnableTask<
                 : namespaceCatalog.listNamespaces(parentNs);
 
             List<String> result = namespaces != null
-                ? namespaces.stream().map(Namespace::toString).sorted().collect(Collectors.toList())
+                ? namespaces.stream().map(Namespace::toString).sorted().toList()
                 : Collections.emptyList();
 
             runContext.logger().info("Found {} namespaces under '{}'", result.size(), parentNs);

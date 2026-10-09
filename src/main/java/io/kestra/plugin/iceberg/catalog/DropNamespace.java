@@ -2,6 +2,7 @@ package io.kestra.plugin.iceberg.catalog;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
@@ -57,6 +58,7 @@ public class DropNamespace extends AbstractIcebergTask implements RunnableTask<D
         description = "The namespace or database to drop (e.g. 'analytics' or multi-level 'analytics.scratch')."
     )
     @NotNull
+    @PluginProperty(group = "main")
     private Property<String> namespace;
 
     @Schema(
@@ -65,6 +67,7 @@ public class DropNamespace extends AbstractIcebergTask implements RunnableTask<D
         defaultValue = "true"
     )
     @Builder.Default
+    @PluginProperty(group = "reliability")
     private Property<Boolean> ifExists = Property.of(true);
 
     @Schema(
@@ -73,6 +76,7 @@ public class DropNamespace extends AbstractIcebergTask implements RunnableTask<D
         defaultValue = "false"
     )
     @Builder.Default
+    @PluginProperty(group = "advanced")
     private Property<Boolean> cascade = Property.of(false);
 
     @Override

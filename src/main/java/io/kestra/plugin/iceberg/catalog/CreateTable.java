@@ -2,6 +2,7 @@ package io.kestra.plugin.iceberg.catalog;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
@@ -101,30 +102,35 @@ public class CreateTable extends AbstractIcebergTableTask implements RunnableTas
         title = "Columns",
         description = "List of column definitions specifying name, type, and optional required/doc flags."
     )
-    private List<Column> columns;
+    @PluginProperty(group = "main")
+    private Property<List<Column>> columns;
 
     @Schema(
         title = "Schema JSON",
         description = "Raw Iceberg schema in JSON format. Takes precedence over 'columns' when specified."
     )
+    @PluginProperty(group = "advanced")
     private Property<String> schemaJson;
 
     @Schema(
         title = "Partition fields",
         description = "Optional list of column names or transforms for partitioning (e.g. 'region', 'days(event_time)', 'bucket(16, id)')."
     )
+    @PluginProperty(group = "advanced")
     private Property<List<String>> partitionFields;
 
     @Schema(
         title = "Table properties",
         description = "Optional table configuration properties (e.g. 'write.format.default: parquet')."
     )
+    @PluginProperty(group = "advanced")
     private Property<Map<String, String>> tableProperties;
 
     @Schema(
         title = "Table location",
         description = "Optional custom storage location (URI) for table data and metadata."
     )
+    @PluginProperty(group = "advanced")
     private Property<String> location;
 
     @Schema(
@@ -133,6 +139,7 @@ public class CreateTable extends AbstractIcebergTableTask implements RunnableTas
         defaultValue = "true"
     )
     @Builder.Default
+    @PluginProperty(group = "reliability")
     private Property<Boolean> ifNotExists = Property.of(true);
 
     @Override
@@ -156,6 +163,10 @@ public class CreateTable extends AbstractIcebergTableTask implements RunnableTas
             ? runContext.render(location).as(String.class).orElse(null)
             : null;
 
+        List<Column> renderedColumns = columns != null
+            ? runContext.render(columns).asList(Column.class)
+            : Collections.emptyList();
+
         Catalog catalog = catalog(runContext);
         try {
             if (catalog.tableExists(identifier)) {
@@ -171,7 +182,7 @@ public class CreateTable extends AbstractIcebergTableTask implements RunnableTas
                     .build();
             }
 
-            org.apache.iceberg.Schema schema = IcebergSchemaUtils.buildSchema(renderedJson, columns);
+            org.apache.iceberg.Schema schema = IcebergSchemaUtils.buildSchema(renderedJson, renderedColumns);
             PartitionSpec spec = IcebergSchemaUtils.buildPartitionSpec(schema, renderedPartitionFields);
 
             runContext.logger().info("Creating Iceberg table '{}'", identifier);

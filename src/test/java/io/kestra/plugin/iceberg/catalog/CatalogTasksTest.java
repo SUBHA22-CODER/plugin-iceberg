@@ -109,11 +109,11 @@ class CatalogTasksTest {
             .catalogConfig(Property.of(CATALOG_CONFIG))
             .namespace(Property.of("db"))
             .tableName(Property.of("events"))
-            .columns(List.of(
+            .columns(Property.of(List.of(
                 CreateTable.Column.builder().name("id").type("long").required(true).build(),
                 CreateTable.Column.builder().name("event_time").type("timestamptz").required(true).build(),
                 CreateTable.Column.builder().name("payload").type("string").build()
-            ))
+            )))
             .partitionFields(Property.of(List.of("days(event_time)")))
             .tableProperties(Property.of(Map.of("write.format.default", "parquet")))
             .ifNotExists(Property.of(true))
@@ -210,7 +210,7 @@ class CatalogTasksTest {
             .catalogConfig(Property.of(CATALOG_CONFIG))
             .namespace(Property.of("cascade_db"))
             .tableName(Property.of("t1"))
-            .columns(List.of(CreateTable.Column.builder().name("id").type("int").build()))
+            .columns(Property.of(List.of(CreateTable.Column.builder().name("id").type("int").build())))
             .build();
         createTable.run(runContext);
 

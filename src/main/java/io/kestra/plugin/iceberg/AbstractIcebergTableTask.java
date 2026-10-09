@@ -1,5 +1,6 @@
 package io.kestra.plugin.iceberg;
 
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -32,6 +33,7 @@ public abstract class AbstractIcebergTableTask extends AbstractIcebergTask {
         description = "The namespace or database of the Iceberg table (e.g. 'analytics' or multi-level 'analytics.raw')"
     )
     @NotNull
+    @PluginProperty(group = "main")
     protected Property<String> namespace;
 
     @Schema(
@@ -39,6 +41,7 @@ public abstract class AbstractIcebergTableTask extends AbstractIcebergTask {
         description = "The name of the Iceberg table"
     )
     @NotNull
+    @PluginProperty(group = "main")
     protected Property<String> tableName;
 
     /**

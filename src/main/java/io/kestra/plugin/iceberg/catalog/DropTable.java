@@ -2,6 +2,7 @@ package io.kestra.plugin.iceberg.catalog;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
@@ -74,6 +75,7 @@ public class DropTable extends AbstractIcebergTableTask implements RunnableTask<
         defaultValue = "false"
     )
     @Builder.Default
+    @PluginProperty(group = "advanced")
     private Property<Boolean> purge = Property.of(false);
 
     @Schema(
@@ -82,6 +84,7 @@ public class DropTable extends AbstractIcebergTableTask implements RunnableTask<
         defaultValue = "true"
     )
     @Builder.Default
+    @PluginProperty(group = "reliability")
     private Property<Boolean> ifExists = Property.of(true);
 
     @Override

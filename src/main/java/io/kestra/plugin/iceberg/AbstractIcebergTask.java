@@ -1,5 +1,6 @@
 package io.kestra.plugin.iceberg;
 
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.Task;
 import io.kestra.core.runners.RunContext;
@@ -55,6 +56,8 @@ public abstract class AbstractIcebergTask extends Task {
             "Sensitive values such as 'credential', 'token', and 'secret' are redacted from logs."
     )
     @NotNull
+    @PluginProperty(group = "connection")
+    @ToString.Exclude
     protected Property<Map<String, String>> catalogConfig;
 
     /**

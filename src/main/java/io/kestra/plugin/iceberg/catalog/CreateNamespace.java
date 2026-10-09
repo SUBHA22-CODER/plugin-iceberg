@@ -2,6 +2,7 @@ package io.kestra.plugin.iceberg.catalog;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
@@ -56,12 +57,14 @@ public class CreateNamespace extends AbstractIcebergTask implements RunnableTask
         description = "The namespace or database to create (e.g. 'analytics' or multi-level 'analytics.marketing')."
     )
     @NotNull
+    @PluginProperty(group = "main")
     private Property<String> namespace;
 
     @Schema(
         title = "Namespace properties",
         description = "Optional metadata key-value properties for the namespace (e.g. 'location', 'comment')."
     )
+    @PluginProperty(group = "advanced")
     private Property<Map<String, String>> properties;
 
     @Schema(
@@ -70,6 +73,7 @@ public class CreateNamespace extends AbstractIcebergTask implements RunnableTask
         defaultValue = "true"
     )
     @Builder.Default
+    @PluginProperty(group = "reliability")
     private Property<Boolean> ifNotExists = Property.of(true);
 
     @Override
