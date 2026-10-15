@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   rest:
     image: apache/iceberg-rest-fixture:latest
@@ -17,22 +15,17 @@ services:
       - minio
 
   minio:
-    image: minio/minio:latest
+    # MinIO no longer publishes images to Docker Hub / quay.io; Chainguard's build is still pullable anonymously.
+    image: cgr.dev/chainguard/minio:latest
     ports:
       - "9000:9000"
       - "9001:9001"
     environment:
       - MINIO_ROOT_USER=admin
       - MINIO_ROOT_PASSWORD=password
-    command: server /data --console-address ":9001"
-
-  mc:
-    image: minio/mc:latest
-    depends_on:
-      - minio
-    entrypoint: >
-      /bin/sh -c "
-      until (/usr/bin/mc alias set myminio http://minio:9000 admin password) do echo '...waiting for minio...' && sleep 1; done;
-      /usr/bin/mc mb --ignore-existing myminio/warehouse || true;
-      exit 0;
-      "
+    # Pre-create the warehouse bucket as a directory under /data (MinIO stores buckets as folders),
+    # which removes the need for a separate MinIO client container.
+    entrypoint:
+      - sh
+      - -c
+      - "mkdir -p /data/warehouse && exec minio server /data --console-address ':9001'"
