@@ -1,6 +1,7 @@
 services:
   rest:
-    image: apache/iceberg-rest-fixture:latest
+    # No 1.11.0 fixture image is published yet; 1.10.1 is the latest release tag (REST protocol is compatible with iceberg-bom 1.11.0).
+    image: apache/iceberg-rest-fixture:1.10.1
     ports:
       - "8181:8181"
     environment:
@@ -16,7 +17,8 @@ services:
 
   minio:
     # MinIO no longer publishes images to Docker Hub / quay.io; Chainguard's build is still pullable anonymously.
-    image: cgr.dev/chainguard/minio:latest
+    # Chainguard's free tier only publishes `latest`, so the image is pinned by digest.
+    image: cgr.dev/chainguard/minio:latest@sha256:2136d593beacf4461187035eca949fe49abd589d5079735025c711ca58fee0c8
     ports:
       - "9000:9000"
       - "9001:9001"
