@@ -152,7 +152,7 @@ public class CreateTable extends AbstractIcebergTableTask implements RunnableTas
     @Override
     public CreateTable.Output run(RunContext runContext) throws Exception {
         var identifier = tableIdentifier(runContext);
-        var skipIfExists = runContext.render(ifNotExists).as(Boolean.class).orElse(true);
+        var rIfNotExists = runContext.render(ifNotExists).as(Boolean.class).orElse(true);
 
         var rSchemaJson = schemaJson != null
             ? runContext.render(schemaJson).as(String.class).orElse(null)
@@ -177,7 +177,7 @@ public class CreateTable extends AbstractIcebergTableTask implements RunnableTas
         var catalog = catalog(runContext);
         try {
             if (catalog.tableExists(identifier)) {
-                if (!skipIfExists) {
+                if (!rIfNotExists) {
                     throw new AlreadyExistsException("Table already exists: " + identifier);
                 }
                 runContext.logger().info("Table '{}' already exists, skipping creation.", identifier);

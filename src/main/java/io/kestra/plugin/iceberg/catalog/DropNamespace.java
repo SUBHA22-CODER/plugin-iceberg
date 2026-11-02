@@ -87,15 +87,15 @@ public class DropNamespace extends AbstractIcebergTask implements RunnableTask<D
             throw new IllegalArgumentException("Invalid namespace: '" + rNamespace + "'. Must contain at least one non-empty level.");
         }
 
-        var skipIfNotExists = runContext.render(ifExists).as(Boolean.class).orElse(true);
-        var cascadeDrop = runContext.render(cascade).as(Boolean.class).orElse(false);
+        var rIfExists = runContext.render(ifExists).as(Boolean.class).orElse(true);
+        var rCascade = runContext.render(cascade).as(Boolean.class).orElse(false);
 
         var catalog = catalog(runContext);
         try {
             var namespaceCatalog = asSupportsNamespaces(catalog);
 
             if (!namespaceCatalog.namespaceExists(ns)) {
-                if (!skipIfNotExists) {
+                if (!rIfExists) {
                     throw new NoSuchNamespaceException("Namespace does not exist: " + ns);
                 }
                 runContext.logger().info("Namespace '{}' does not exist, skipping drop.", ns);
@@ -105,7 +105,7 @@ public class DropNamespace extends AbstractIcebergTask implements RunnableTask<D
                     .build();
             }
 
-            if (cascadeDrop) {
+            if (rCascade) {
                 var tables = catalog.listTables(ns);
                 for (var table : tables) {
                     runContext.logger().info("Cascade dropping table '{}'", table);

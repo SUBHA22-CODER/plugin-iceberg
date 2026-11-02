@@ -26,10 +26,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-/**
- * Shared base task for Apache Iceberg tasks.
- * Manages catalog configuration rendering, credential redaction, and catalog lifecycle.
- */
 @SuperBuilder
 @ToString
 @EqualsAndHashCode
@@ -37,11 +33,7 @@ import java.util.regex.Pattern;
 @NoArgsConstructor
 public abstract class AbstractIcebergTask extends Task {
 
-    /**
-     * Only the REST catalog is included in Phase 1; additional types
-     * (Glue, Hive, Nessie, Hadoop) are planned for future phases once each
-     * integration is validated end-to-end.
-     */
+    // REST only for now: Glue, Hive, Nessie and Hadoop follow once each is validated end-to-end.
     public static final Set<String> SUPPORTED_TYPES = Set.of("rest");
 
     private static final Pattern SECRET_KEY_PATTERN = Pattern.compile(

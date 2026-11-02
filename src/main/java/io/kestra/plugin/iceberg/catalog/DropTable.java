@@ -92,13 +92,13 @@ public class DropTable extends AbstractIcebergTableTask implements RunnableTask<
     @Override
     public DropTable.Output run(RunContext runContext) throws Exception {
         var identifier = tableIdentifier(runContext);
-        var skipIfNotExists = runContext.render(ifExists).as(Boolean.class).orElse(true);
-        var purgeData = runContext.render(purge).as(Boolean.class).orElse(false);
+        var rIfExists = runContext.render(ifExists).as(Boolean.class).orElse(true);
+        var rPurge = runContext.render(purge).as(Boolean.class).orElse(false);
 
         var catalog = catalog(runContext);
         try {
             if (!catalog.tableExists(identifier)) {
-                if (!skipIfNotExists) {
+                if (!rIfExists) {
                     throw new NoSuchTableException("Table does not exist: " + identifier);
                 }
                 runContext.logger().info("Table '{}' does not exist, skipping drop.", identifier);
@@ -108,8 +108,8 @@ public class DropTable extends AbstractIcebergTableTask implements RunnableTask<
                     .build();
             }
 
-            runContext.logger().info("Dropping Iceberg table '{}' (purge={})", identifier, purgeData);
-            var dropped = catalog.dropTable(identifier, purgeData);
+            runContext.logger().info("Dropping Iceberg table '{}' (purge={})", identifier, rPurge);
+            var dropped = catalog.dropTable(identifier, rPurge);
 
             return Output.builder()
                 .table(identifier.toString())

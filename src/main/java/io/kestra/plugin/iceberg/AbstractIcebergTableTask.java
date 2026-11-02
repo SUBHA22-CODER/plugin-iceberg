@@ -12,10 +12,6 @@ import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import org.apache.iceberg.catalog.TableIdentifier;
 
-/**
- * Shared base task for Apache Iceberg table-level tasks.
- * Manages namespace and table name resolution and table identifiers.
- */
 @SuperBuilder
 @ToString
 @EqualsAndHashCode

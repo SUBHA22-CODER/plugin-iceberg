@@ -92,14 +92,14 @@ public class CreateNamespace extends AbstractIcebergTask implements RunnableTask
             ? runContext.render(properties).asMap(String.class, String.class)
             : Collections.<String, String>emptyMap();
 
-        var skipIfExists = runContext.render(ifNotExists).as(Boolean.class).orElse(true);
+        var rIfNotExists = runContext.render(ifNotExists).as(Boolean.class).orElse(true);
 
         var catalog = catalog(runContext);
         try {
             var namespaceCatalog = asSupportsNamespaces(catalog);
 
             if (namespaceCatalog.namespaceExists(ns)) {
-                if (!skipIfExists) {
+                if (!rIfNotExists) {
                     throw new AlreadyExistsException("Namespace already exists: " + ns);
                 }
                 runContext.logger().info("Namespace '{}' already exists, skipping creation.", ns);

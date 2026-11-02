@@ -11,9 +11,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
-/**
- * Utility methods for building Iceberg Schemas and PartitionSpecs from user-supplied configurations.
- */
 public final class IcebergSchemaUtils {
 
     private static final Pattern DECIMAL_PATTERN = Pattern.compile("^decimal\\s*\\(\\s*(\\d+)\\s*,\\s*(\\d+)\\s*\\)$");
