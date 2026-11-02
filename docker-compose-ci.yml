@@ -10,24 +10,30 @@ services:
       - AWS_REGION=us-east-1
       - CATALOG_WAREHOUSE=s3://warehouse/
       - CATALOG_IO__IMPL=org.apache.iceberg.aws.s3.S3FileIO
-      - CATALOG_S3_ENDPOINT=http://minio:9000
+      - CATALOG_S3_ENDPOINT=http://rustfs:9000
       - CATALOG_S3_PATH__STYLE__ACCESS=true
     depends_on:
-      - minio
+      rustfs:
+        condition: service_healthy
 
-  minio:
-    # MinIO no longer publishes images to Docker Hub / quay.io; Chainguard's build is still pullable anonymously.
-    # Chainguard's free tier only publishes `latest`, so the image is pinned by digest.
-    image: cgr.dev/chainguard/minio:latest@sha256:2136d593beacf4461187035eca949fe49abd589d5079735025c711ca58fee0c8
+  rustfs:
+    # MinIO's open-source edition is archived and no longer publishes images, so the S3 backend is RustFS,
+    # an Apache-2.0 S3-compatible server (same image as kestra-io/plugin-huawei), pinned by digest.
+    image: rustfs/rustfs:1.0.3@sha256:9ca9559533b537d10482fe923288b676ad08f92a7069d9a17327fbae3cab688b
     ports:
       - "9000:9000"
       - "9001:9001"
     environment:
-      - MINIO_ROOT_USER=admin
-      - MINIO_ROOT_PASSWORD=password
-    # Pre-create the warehouse bucket as a directory under /data (MinIO stores buckets as folders),
-    # which removes the need for a separate MinIO client container.
+      - RUSTFS_ACCESS_KEY=admin
+      - RUSTFS_SECRET_KEY=password
+    # Pre-create the warehouse bucket as a directory under /data (RustFS lists top-level folders as buckets),
+    # which removes the need for a separate S3 client container.
     entrypoint:
       - sh
       - -c
-      - "mkdir -p /data/warehouse && exec minio server /data --console-address ':9001'"
+      - "mkdir -p /data/warehouse && exec /entrypoint.sh rustfs"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -f http://localhost:9000/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 12

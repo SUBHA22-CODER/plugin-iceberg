@@ -23,7 +23,7 @@ Single-module plugin focused strictly on REST catalog control-plane operations. 
 Infrastructure dependencies (Docker Compose services for CI integration testing via `docker-compose-ci.yml`):
 
 - `rest`: Apache Iceberg REST catalog server fixture.
-- `minio`: S3-compatible object storage backend pre-creating the warehouse bucket.
+- `rustfs`: S3-compatible object storage backend (RustFS, replacing the archived MinIO OSS) pre-creating the warehouse bucket.
 
 ### Key Plugin Classes
 
