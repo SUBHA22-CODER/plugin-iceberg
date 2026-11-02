@@ -7,7 +7,7 @@
 # and executable both locally and in GitHub Actions.
 #
 # Services started (via docker-compose-ci.yml):
-#   - minio : S3 storage backend (port 9000), 'warehouse' bucket pre-created
+#   - rustfs : S3-compatible storage backend (port 9000), 'warehouse' bucket pre-created
 #   - rest  : Apache Iceberg REST catalog fixture (port 8181)
 #
 # Usage:
@@ -17,11 +17,11 @@ set -euo pipefail
 compose_file="docker-compose-ci.yml"
 
 # Tear down any previous run so we start with a clean state
-echo "[setup-unit] Resetting Iceberg REST and MinIO containers..."
+echo "[setup-unit] Resetting Iceberg REST and RustFS containers..."
 docker compose -f "${compose_file}" down -v --remove-orphans >/dev/null 2>&1 || true
 
 # Start services
-echo "[setup-unit] Starting Iceberg REST catalog and MinIO fixture..."
+echo "[setup-unit] Starting Iceberg REST catalog and RustFS fixture..."
 docker compose -f "${compose_file}" up -d --wait
 
 # Verify the Iceberg REST catalog is reachable
