@@ -110,25 +110,26 @@ public abstract class AbstractIcebergTask extends Task {
     protected Catalog catalog(RunContext runContext) throws Exception {
         var rCatalogConfig = runContext.render(catalogConfig).asMap(String.class, String.class);
         if (rCatalogConfig == null || rCatalogConfig.isEmpty()) {
-            throw new IllegalArgumentException("'catalogConfig' must be provided with at least 'type' or 'catalog-impl'.");
+            throw new IllegalArgumentException("'catalogConfig' must be provided with 'type' set to one of " + SUPPORTED_TYPES + ".");
         }
 
-        var type = rCatalogConfig.get("type");
-        var catalogImpl = rCatalogConfig.get("catalog-impl");
-
-        if (type == null && catalogImpl == null) {
+        // catalog-impl would load any Catalog class on the classpath and bypass the REST-only scope.
+        if (rCatalogConfig.containsKey("catalog-impl")) {
             throw new IllegalArgumentException(
-                "'catalogConfig' must contain either 'type' (supported: " + SUPPORTED_TYPES + ") or 'catalog-impl'."
+                "'catalog-impl' is not supported in 'catalogConfig'. Set 'type' to one of " + SUPPORTED_TYPES + " instead."
             );
         }
 
-        if (type != null) {
-            var normalizedType = type.trim().toLowerCase(Locale.ROOT);
-            if (!SUPPORTED_TYPES.contains(normalizedType)) {
-                throw new IllegalArgumentException(
-                    "Unsupported catalog type '" + type + "'. Supported types are: " + SUPPORTED_TYPES + " (or supply 'catalog-impl')."
-                );
-            }
+        var type = rCatalogConfig.get("type");
+        if (type == null) {
+            throw new IllegalArgumentException("'catalogConfig' must contain 'type' (supported: " + SUPPORTED_TYPES + ").");
+        }
+
+        var normalizedType = type.trim().toLowerCase(Locale.ROOT);
+        if (!SUPPORTED_TYPES.contains(normalizedType)) {
+            throw new IllegalArgumentException(
+                "Unsupported catalog type '" + type + "'. Supported types are: " + SUPPORTED_TYPES + "."
+            );
         }
 
         // FileIO reads s3.*/io-impl from the Hadoop Configuration, so all catalog properties are forwarded.
@@ -139,8 +140,12 @@ public abstract class AbstractIcebergTask extends Task {
             }
         }
 
-        var catalog = CatalogUtil.buildIcebergCatalog("kestra", rCatalogConfig, hadoopConf);
+        var catalog = buildCatalog(rCatalogConfig, hadoopConf);
         runContext.logger().debug("Initialized Iceberg catalog with configuration: {}", redact(rCatalogConfig));
         return catalog;
+    }
+
+    protected Catalog buildCatalog(Map<String, String> properties, Configuration hadoopConf) {
+        return CatalogUtil.buildIcebergCatalog("kestra", properties, hadoopConf);
     }
 }

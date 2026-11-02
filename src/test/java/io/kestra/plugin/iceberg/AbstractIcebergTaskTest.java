@@ -130,7 +130,7 @@ class AbstractIcebergTaskTest {
     }
 
     @Test
-    void shouldFailWhenCatalogConfigMissingTypeAndImpl() {
+    void shouldFailWhenCatalogConfigMissingType() {
         RunContext runContext = runContextFactory.of();
 
         DummyIcebergTask task = DummyIcebergTask.builder()
@@ -142,7 +142,26 @@ class AbstractIcebergTaskTest {
             () -> task.testCatalog(runContext)
         );
 
-        assertThat(thrown.getMessage(), containsString("must contain either 'type'"));
+        assertThat(thrown.getMessage(), containsString("must contain 'type'"));
+    }
+
+    @Test
+    void shouldRejectCatalogImpl() {
+        RunContext runContext = runContextFactory.of();
+
+        DummyIcebergTask task = DummyIcebergTask.builder()
+            .catalogConfig(new Property<>(Map.of(
+                "catalog-impl", "org.apache.iceberg.inmemory.InMemoryCatalog",
+                "warehouse", "memory://bypass"
+            )))
+            .build();
+
+        IllegalArgumentException thrown = assertThrows(
+            IllegalArgumentException.class,
+            () -> task.testCatalog(runContext)
+        );
+
+        assertThat(thrown.getMessage(), containsString("'catalog-impl' is not supported"));
     }
 
     @Test
